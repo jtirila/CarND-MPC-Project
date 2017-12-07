@@ -8,6 +8,11 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "MPC.h"
 #include "json.hpp"
+#include "matplotlibcpp.h"
+
+#define debug true
+
+namespace plt = matplotlibcpp;
 
 // for convenience
 using json = nlohmann::json;
@@ -92,14 +97,65 @@ int main() {
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
 
+          int x_size = ptsx.size();
+          int y_size = ptsy.size();
+          std::cout << "ptsx size: " << x_size << "\n";
+          std::cout << "ptsy size: " << y_size << "\n";
+
+
+          double* ptr_x = &ptsx[0];
+          double* ptr_y = &ptsy[0];
+          Eigen::Map<Eigen::VectorXd> ptsx_m(ptr_x, ptsx.size());
+          Eigen::Map<Eigen::VectorXd> ptsy_m(ptr_y, ptsy.size());
+          // for(int i = 0; i < x_size; i++){
+          //   // ptsx_m << 4.5;
+          //   std::cout << "ptsx[" << i << "]: " << ptsx[i] << "\n";
+          //   ptsx_m << ptsx[i];
+          //   std::cout << "ptsx_m: \n" << ptsx_m << "\n";
+          //   ptsy_m << ptsy[i];
+          //   std::cout << "ptsy_m: \n" << ptsy_m << "\n";
+          // }
+
+          std::cout << "ptsx_m: " << ptsx_m << "\n";
+          std::cout << "ptsy_m: " << ptsy_m << "\n";
+
+
+          Eigen::VectorXd coeffs(4);
+          coeffs = polyfit(ptsx_m, ptsy_m, 3);
+          std::cout << "Coeffs: \n" << coeffs <<  "\n";
+
+
+          if(debug) {
+            double min_x = *std::min_element(std::begin(ptsx), std::end(ptsx));
+            double diff = *std::max_element(std::begin(ptsx), std::end(ptsx)) - min_x;
+
+            std::vector<double> xgrid;
+            std::vector<double> ygrid;
+            for (int j = 0; j < 100; j++) {
+              double x_tmp = min_x + j / 100.0 * diff;
+              xgrid.push_back(x_tmp);
+              ygrid.push_back(coeffs[0] +
+                              coeffs[1] * x_tmp +
+                              coeffs[2] * x_tmp * x_tmp +
+                              coeffs[3] * x_tmp * x_tmp * x_tmp);
+            }
+            plt::plot(ptsx, ptsy);
+            plt::plot(xgrid, ygrid);
+            plt::show();
+          }
+          Eigen::VectorXd state(6);
+          state << px, py, psi, v, 0.0, 0.0;
+          std::cout << "State: \n" << state <<  "\n";
+          vector<double> vars = mpc.Solve(state, coeffs);
+
           /*
           * TODO: Calculate steering angle and throttle using MPC.
           *
           * Both are in between [-1, 1].
           *
           */
-          double steer_value;
-          double throttle_value;
+          double steer_value = vars[7];
+          double throttle_value = vars[8];
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
