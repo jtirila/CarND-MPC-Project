@@ -22,7 +22,7 @@ double dt = 0.2;
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
 // Miles per hour converted to m/s
-const double ref_v = 0.44704 * 50;
+const double ref_v = 0.44704 * 15;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
