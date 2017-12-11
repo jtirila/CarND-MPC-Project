@@ -136,17 +136,28 @@ int main() {
           int y_size = ptsy.size();
 
           assert(y_size == x_size);
+
+
           double pred_dt = 0.1;
-          px += v * pred_dt + 1. / 2. * throttle * 3.0 * pred_dt * pred_dt;
-          psi += v / Lf * steer * pred_dt;
+          px += v * pred_dt * CppAD::cos(psi);
+          py += v * pred_dt * CppAD::sin(psi);
+          psi -= v / Lf * steer * pred_dt;
+          v += throttle * 2.0 * pred_dt;
 
           std::vector<double> car_coords {px, py, psi};
           std::vector<std::vector<double>> transformed_waypoints = BatchMapCarTransform(ptsx, ptsy, car_coords);
 
-          Eigen::VectorXd coeffs(4);
+          Eigen::VectorXd coeffs(3);
           Eigen::VectorXd xvals = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(transformed_waypoints[0].data(), transformed_waypoints[0].size());
           Eigen::VectorXd yvals = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(transformed_waypoints[1].data(), transformed_waypoints[1].size());
-          coeffs = polyfit(xvals, yvals, 3);
+          coeffs = polyfit(xvals, yvals, 2);
+
+          double epsi = -CppAD::atan(mpc.PolynomialValueOrDeriv(true, coeffs, 0.0));
+          double cte = MPC::PolynomialValueOrDeriv(false, coeffs, 0.0);
+
+          Eigen::VectorXd state(8);
+          state << 0.0, 0.0, 0.0, v, cte, epsi, steer, throttle;
+          std::cout << "State: \n" << state <<  "\n";
 
           if(false) {
             double min_x = *std::min_element(std::begin(transformed_waypoints[0]), std::end(transformed_waypoints[0]));
@@ -160,8 +171,7 @@ int main() {
               xgrid.push_back(x_tmp);
               double y_tmp = coeffs[0] +
                              coeffs[1] * x_tmp +
-                             coeffs[2] * x_tmp * x_tmp +
-                             coeffs[3] * x_tmp * x_tmp * x_tmp;
+                             coeffs[2] * x_tmp * x_tmp;
               ygrid.push_back(y_tmp);
             }
             std::cout << "\nend grid print\n";
@@ -171,10 +181,6 @@ int main() {
             plt::plot(transformed_waypoints[0], transformed_waypoints[1], "rx");
             plt::show();
           }
-          Eigen::VectorXd state(8);
-
-          state << 0.0, 0.0, 0.0, v, MPC::PolynomialValueOrDeriv(false, coeffs, 0.0), -CppAD::atan(mpc.PolynomialValueOrDeriv(true, coeffs, 0.0)), steer, throttle;
-          std::cout << "State: \n" << state <<  "\n";
 
           std::vector<double> vars = mpc.Solve(state, coeffs);
           double steer_value = vars[6];
