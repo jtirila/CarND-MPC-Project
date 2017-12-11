@@ -22,7 +22,7 @@ double dt = 0.2;
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
 // Miles per hour converted to m/s
-const double ref_v = 0.44704 * 15;
+const double ref_v = 0.44704 * 30;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -68,14 +68,14 @@ public:
 
     // The part of the cost based on the reference state.
     for (int t = 0; t < N; t++) {
-      fg[0] += CppAD::pow(vars[cte_start + t], 2);
+      fg[0] += 1000 * CppAD::pow(vars[cte_start + t], 2);
       fg[0] += CppAD::pow(vars[epsi_start + t], 2);
       fg[0] += CppAD::pow(vars[v_start + t] - ref_v, 2);
     }
 
     // Minimize the use of actuators.
     for (int t = 0; t < N - 1; t++) {
-      fg[0] += CppAD::pow(vars[delta_start + t], 2);
+      fg[0] += 1000 * CppAD::pow(vars[delta_start + t], 2);
       fg[0] += CppAD::pow(vars[a_start + t], 2);
     }
 
@@ -181,24 +181,16 @@ vector<double> MPC::Solve(Eigen::VectorXd x0, Eigen::VectorXd coeffs) {
   for (int i = 0; i < n_vars; i++) {
     vars[i] = 0.0;
   }
+
   // Set the initial variable values
-  double pred_dt = 0.1;
+  // double pred_dt = 0.1;
 
-
-
-
-  vars[x_start] = x + v * pred_dt + 1. / 2. * throttle * 3.0 * pred_dt * pred_dt;
-  CppAD::AD<double> f = MPC::PolynomialValueOrDeriv(false, coeffs, vars[x_start]);
-  CppAD::AD<double> psides = CppAD::atan(MPC::PolynomialValueOrDeriv(true, coeffs, x));
-
-  std::cout << "f: " << f << "\n";
-  std::cout << "psides: " << psides << "\n";
-
+  vars[x_start] = x;
   vars[y_start] = y;
-  vars[psi_start] = psi + v / Lf * steer * pred_dt;
-  vars[v_start] = v + throttle * 3.0 * pred_dt;
-  vars[epsi_start] = CppAD::Value(CppAD::Var2Par(vars[psi_start] - psides + v * steer / Lf * pred_dt));
-  vars[cte_start] = CppAD::Value(CppAD::Var2Par(f - y + v * CppAD::sin(vars[epsi_start]) * pred_dt));
+  vars[psi_start] = psi;
+  vars[v_start] = v;
+  vars[epsi_start] = epsi;
+  vars[cte_start] = cte;
 
   std::cout << "Projected state: ";
   std::cout << vars[x_start] << ", ";

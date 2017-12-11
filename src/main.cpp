@@ -15,6 +15,8 @@ namespace plt = matplotlibcpp;
 // for convenience
 using json = nlohmann::json;
 
+
+const double Lf = 2.67;
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
 double deg2rad(double x) { return x * pi() / 180; }
@@ -134,6 +136,9 @@ int main() {
           int y_size = ptsy.size();
 
           assert(y_size == x_size);
+          double pred_dt = 0.1;
+          px += v * pred_dt + 1. / 2. * throttle * 3.0 * pred_dt * pred_dt;
+          psi += v / Lf * steer * pred_dt;
 
           std::vector<double> car_coords {px, py, psi};
           std::vector<std::vector<double>> transformed_waypoints = BatchMapCarTransform(ptsx, ptsy, car_coords);
