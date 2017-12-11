@@ -130,6 +130,7 @@ int main() {
           double v = j[1]["speed"];
           v *= 0.44704; // Meters per second correction
           double steer = j[1]["steering_angle"];
+          steer *= -1.0;
           double throttle = j[1]["throttle"];
 
           int x_size = ptsx.size();
@@ -141,8 +142,8 @@ int main() {
           double pred_dt = 0.1;
           px += v * pred_dt * CppAD::cos(psi);
           py += v * pred_dt * CppAD::sin(psi);
-          psi -= v / Lf * steer * pred_dt;
-          v += throttle * 2.0 * pred_dt;
+          psi += v / Lf * steer * pred_dt;
+          v += throttle * pred_dt;
 
           std::vector<double> car_coords {px, py, psi};
           std::vector<std::vector<double>> transformed_waypoints = BatchMapCarTransform(ptsx, ptsy, car_coords);
