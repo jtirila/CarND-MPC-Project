@@ -10,8 +10,6 @@
 #include "json.hpp"
 #include "matplotlibcpp.h"
 
-#define debug true
-
 namespace plt = matplotlibcpp;
 
 // for convenience
@@ -70,6 +68,38 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
   return result;
 }
 
+
+// TODO: Move this somewhere else?
+std::vector<double> MapCarTransform(double mx,
+                                    double my,
+                                    const std::vector<double>& car_coords){
+  double theta = -car_coords[2];
+
+  double cx = car_coords[0];
+  double cy = car_coords[1];
+
+  std::vector<double> result{
+      std::cos(theta) * (mx - cx) - std::sin(theta) * (my - cy),
+      std::sin(theta) * (mx - cx) + std::cos(theta) * (my - cy)
+  };
+  return result;
+
+}
+
+std::vector<std::vector<double>> BatchMapCarTransform(const std::vector<double>& map_xcoords,
+                                                      const std::vector<double>& map_ycoords,
+                                                      const std::vector<double>& car_coords){
+  std::vector<double> xresult;
+  std::vector<double> yresult;
+  for(int col = 0; col < map_xcoords.size(); col++){
+    std::vector<double> single_result = MapCarTransform(map_xcoords[col], map_ycoords[col], car_coords);
+    xresult.push_back(single_result[0]);
+    yresult.push_back(single_result[1]);
+  }
+  return std::vector<std::vector<double>> {xresult, yresult};
+}
+
+
 int main() {
   uWS::Hub h;
 
@@ -96,76 +126,66 @@ int main() {
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
+          v *= 0.44704; // Meters per second correction
+          double steer = j[1]["steering_angle"];
+          double throttle = j[1]["throttle"];
 
           int x_size = ptsx.size();
           int y_size = ptsy.size();
-          std::cout << "ptsx size: " << x_size << "\n";
-          std::cout << "ptsy size: " << y_size << "\n";
 
+          assert(y_size == x_size);
 
-          double* ptr_x = &ptsx[0];
-          double* ptr_y = &ptsy[0];
-          Eigen::Map<Eigen::VectorXd> ptsx_m(ptr_x, ptsx.size());
-          Eigen::Map<Eigen::VectorXd> ptsy_m(ptr_y, ptsy.size());
-          // for(int i = 0; i < x_size; i++){
-          //   // ptsx_m << 4.5;
-          //   std::cout << "ptsx[" << i << "]: " << ptsx[i] << "\n";
-          //   ptsx_m << ptsx[i];
-          //   std::cout << "ptsx_m: \n" << ptsx_m << "\n";
-          //   ptsy_m << ptsy[i];
-          //   std::cout << "ptsy_m: \n" << ptsy_m << "\n";
-          // }
-
-          std::cout << "ptsx_m: " << ptsx_m << "\n";
-          std::cout << "ptsy_m: " << ptsy_m << "\n";
-
+          std::vector<double> car_coords {px, py, psi};
+          std::vector<std::vector<double>> transformed_waypoints = BatchMapCarTransform(ptsx, ptsy, car_coords);
 
           Eigen::VectorXd coeffs(4);
-          coeffs = polyfit(ptsx_m, ptsy_m, 3);
-          std::cout << "Coeffs: \n" << coeffs <<  "\n";
+          Eigen::VectorXd xvals = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(transformed_waypoints[0].data(), transformed_waypoints[0].size());
+          Eigen::VectorXd yvals = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(transformed_waypoints[1].data(), transformed_waypoints[1].size());
+          coeffs = polyfit(xvals, yvals, 3);
 
-
-          if(debug) {
-            double min_x = *std::min_element(std::begin(ptsx), std::end(ptsx));
-            double diff = *std::max_element(std::begin(ptsx), std::end(ptsx)) - min_x;
+          if(false) {
+            double min_x = *std::min_element(std::begin(transformed_waypoints[0]), std::end(transformed_waypoints[0]));
+            double diff = *std::max_element(std::begin(transformed_waypoints[0]), std::end(transformed_waypoints[0])) - min_x;
 
             std::vector<double> xgrid;
             std::vector<double> ygrid;
+            std::cout << "begin grid print\n";
             for (int j = 0; j < 100; j++) {
               double x_tmp = min_x + j / 100.0 * diff;
               xgrid.push_back(x_tmp);
-              ygrid.push_back(coeffs[0] +
-                              coeffs[1] * x_tmp +
-                              coeffs[2] * x_tmp * x_tmp +
-                              coeffs[3] * x_tmp * x_tmp * x_tmp);
+              double y_tmp = coeffs[0] +
+                             coeffs[1] * x_tmp +
+                             coeffs[2] * x_tmp * x_tmp +
+                             coeffs[3] * x_tmp * x_tmp * x_tmp;
+              ygrid.push_back(y_tmp);
             }
-            plt::plot(ptsx, ptsy);
+            std::cout << "\nend grid print\n";
+
+
             plt::plot(xgrid, ygrid);
+            plt::plot(transformed_waypoints[0], transformed_waypoints[1], "rx");
             plt::show();
           }
-          Eigen::VectorXd state(6);
-          state << px, py, psi, v, 0.0, 0.0;
-          std::cout << "State: \n" << state <<  "\n";
-          vector<double> vars = mpc.Solve(state, coeffs);
+          Eigen::VectorXd state(8);
 
-          /*
-          * TODO: Calculate steering angle and throttle using MPC.
-          *
-          * Both are in between [-1, 1].
-          *
-          */
-          double steer_value = vars[7];
-          double throttle_value = vars[8];
+          state << 0.0, 0.0, 0.0, v, MPC::PolynomialValueOrDeriv(false, coeffs, 0.0), -CppAD::atan(mpc.PolynomialValueOrDeriv(true, coeffs, 0.0)), steer, throttle;
+          std::cout << "State: \n" << state <<  "\n";
+
+          std::vector<double> vars = mpc.Solve(state, coeffs);
+          double steer_value = vars[6];
+          double throttle_value = vars[7];
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
-          msgJson["steering_angle"] = steer_value;
+          msgJson["steering_angle"] = - steer_value / deg2rad(25);
           msgJson["throttle"] = throttle_value;
 
           //Display the MPC predicted trajectory 
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
+          mpc_x_vals.push_back(vars[0]);
+          mpc_y_vals.push_back(vars[1]);
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
@@ -174,8 +194,8 @@ int main() {
           msgJson["mpc_y"] = mpc_y_vals;
 
           //Display the waypoints/reference line
-          vector<double> next_x_vals;
-          vector<double> next_y_vals;
+          vector<double> next_x_vals = transformed_waypoints[0];
+          vector<double> next_y_vals = transformed_waypoints[1];
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line

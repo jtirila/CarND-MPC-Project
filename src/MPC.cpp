@@ -2,12 +2,13 @@
 #include <cppad/cppad.hpp>
 #include <cppad/ipopt/solve.hpp>
 #include "Eigen-3.3/Eigen/Core"
+#include <cmath>
 
 using CppAD::AD;
 
 // TODO: Set the timestep length and duration
-size_t N = 9;
-double dt = 0.05;
+size_t N = 10;
+double dt = 0.2;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -20,7 +21,8 @@ double dt = 0.05;
 //
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
-const double ref_v = 40;
+// Miles per hour converted to m/s
+const double ref_v = 0.44704 * 50;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -33,6 +35,22 @@ const size_t cte_start = v_start + N;
 const size_t epsi_start = cte_start + N;
 const size_t delta_start = epsi_start + N;
 const size_t a_start = delta_start + N - 1;
+
+double MPC::PolynomialValueOrDeriv(bool derivative, Eigen::VectorXd& coeffs, CppAD::AD<double> xval){
+  size_t der_degree;
+  if(derivative)
+    der_degree = 1;
+  else
+    der_degree = 0;
+  std::vector<double> my_coeffs;
+  double xval_d = CppAD::Value(CppAD::Var2Par(xval));
+  for(int i = 0; i < coeffs.rows(); i++)
+    my_coeffs.push_back(coeffs(i, 0));
+  CppAD::AD<double> result = CppAD::Poly(der_degree, my_coeffs, xval_d);
+  return CppAD::Value(result);
+
+}
+
 
 class FG_eval {
 public:
@@ -63,8 +81,8 @@ public:
 
     // Minimize the value gap between sequential actuations.
     for (int t = 0; t < N - 2; t++) {
-      fg[0] += 5000 * CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
-      fg[0] += CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
+      fg[0] += 50 * CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
+      fg[0] += 50 * CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
     }
 
     //
@@ -106,8 +124,8 @@ public:
       AD<double> delta0 = vars[delta_start + t - 1];
       AD<double> a0 = vars[a_start + t - 1];
 
-      AD<double> f0 = coeffs[0] + coeffs[1] * x0;
-      AD<double> psides0 = CppAD::atan(coeffs[1]);
+      AD<double> f0 = MPC::PolynomialValueOrDeriv(false, coeffs, x0);
+      AD<double> psides0 = CppAD::atan(MPC::PolynomialValueOrDeriv(true, coeffs, x0));
 
       // Here's `x` to get you started.
       // The idea here is to constraint this value to be 0.
@@ -121,10 +139,10 @@ public:
       // epsi[t+1] = psi[t] - psides[t] + v[t] * delta[t] / Lf * dt
       fg[1 + x_start + t] = x1 - (x0 + v0 * CppAD::cos(psi0) * dt);
       fg[1 + y_start + t] = y1 - (y0 + v0 * CppAD::sin(psi0) * dt);
-      fg[1 + psi_start + t] = psi1 - (psi0 + v0 * delta0 / Lf * dt);
-      fg[1 + v_start + t] = v1 - (v0 + a0 * dt);
+      fg[1 + psi_start + t] = CppAD::Var2Par(psi1 - (psi0 + v0 * delta0 / Lf * dt));
+      fg[1 + v_start + t] = v1 - (v0 + a0 * 3.0 * dt);
       fg[1 + cte_start + t] =
-          cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
+          cte1 - ((f0 - y0) - (v0 * CppAD::sin(epsi0) * dt));
       fg[1 + epsi_start + t] =
           epsi1 - ((psi0 - psides0) + v0 * delta0 / Lf * dt);
     }
@@ -148,6 +166,8 @@ vector<double> MPC::Solve(Eigen::VectorXd x0, Eigen::VectorXd coeffs) {
   double v = x0[3];
   double cte = x0[4];
   double epsi = x0[5];
+  double steer = x0[6];
+  double throttle = x0[7];
 
   // number of independent variables
   // N timesteps == N - 1 actuations
@@ -162,13 +182,31 @@ vector<double> MPC::Solve(Eigen::VectorXd x0, Eigen::VectorXd coeffs) {
     vars[i] = 0.0;
   }
   // Set the initial variable values
-  vars[x_start] = x;
-  vars[y_start] = y;
-  vars[psi_start] = psi;
-  vars[v_start] = v;
-  vars[cte_start] = cte;
-  vars[epsi_start] = epsi;
+  double pred_dt = 0.1;
 
+
+
+
+  vars[x_start] = x + v * pred_dt + 1. / 2. * throttle * 3.0 * pred_dt * pred_dt;
+  CppAD::AD<double> f = MPC::PolynomialValueOrDeriv(false, coeffs, vars[x_start]);
+  CppAD::AD<double> psides = CppAD::atan(MPC::PolynomialValueOrDeriv(true, coeffs, x));
+
+  std::cout << "f: " << f << "\n";
+  std::cout << "psides: " << psides << "\n";
+
+  vars[y_start] = y;
+  vars[psi_start] = psi + v / Lf * steer * pred_dt;
+  vars[v_start] = v + throttle * 3.0 * pred_dt;
+  vars[epsi_start] = CppAD::Value(CppAD::Var2Par(vars[psi_start] - psides + v * steer / Lf * pred_dt));
+  vars[cte_start] = CppAD::Value(CppAD::Var2Par(f - y + v * CppAD::sin(vars[epsi_start]) * pred_dt));
+
+  std::cout << "Projected state: ";
+  std::cout << vars[x_start] << ", ";
+  std::cout << vars[y_start] << ", ";
+  std::cout << vars[psi_start] << ", ";
+  std::cout << vars[v_start] << ", ";
+  std::cout << vars[cte_start] << ", ";
+  std::cout << vars[epsi_start] << "\n";
   // Lower and upper limits for x
   Dvector vars_lowerbound(n_vars);
   Dvector vars_upperbound(n_vars);
@@ -204,19 +242,20 @@ vector<double> MPC::Solve(Eigen::VectorXd x0, Eigen::VectorXd coeffs) {
     constraints_lowerbound[i] = 0;
     constraints_upperbound[i] = 0;
   }
-  constraints_lowerbound[x_start] = x;
-  constraints_lowerbound[y_start] = y;
-  constraints_lowerbound[psi_start] = psi;
-  constraints_lowerbound[v_start] = v;
-  constraints_lowerbound[cte_start] = cte;
-  constraints_lowerbound[epsi_start] = epsi;
+  constraints_lowerbound[x_start] = vars[x_start];
+  constraints_lowerbound[y_start] = vars[y_start];
+  constraints_lowerbound[psi_start] = vars[psi_start];
+  constraints_lowerbound[v_start] = vars[v_start];
+  constraints_lowerbound[cte_start] = vars[cte_start];
+  constraints_lowerbound[epsi_start] = vars[epsi_start];
 
-  constraints_upperbound[x_start] = x;
-  constraints_upperbound[y_start] = y;
-  constraints_upperbound[psi_start] = psi;
-  constraints_upperbound[v_start] = v;
-  constraints_upperbound[cte_start] = cte;
-  constraints_upperbound[epsi_start] = epsi;
+  constraints_upperbound[x_start] = vars[x_start];
+  constraints_upperbound[y_start] = vars[y_start];
+  constraints_upperbound[psi_start] = vars[psi_start];
+  constraints_upperbound[v_start] = vars[v_start];
+  constraints_upperbound[cte_start] = vars[cte_start];
+  constraints_upperbound[epsi_start] = vars[epsi_start];
+
 
   // Object that computes objective and constraints
   FG_eval fg_eval(coeffs);
@@ -243,9 +282,25 @@ vector<double> MPC::Solve(Eigen::VectorXd x0, Eigen::VectorXd coeffs) {
 
   auto cost = solution.obj_value;
   std::cout << "Cost " << cost << std::endl;
-  return {solution.x[x_start + 1],   solution.x[y_start + 1],
-          solution.x[psi_start + 1], solution.x[v_start + 1],
-          solution.x[cte_start + 1], solution.x[epsi_start + 1],
+  int offset = 1;
+
+  std::cout << "Let us inspect the solution: \n";
+  for(int i = 0; i < N - 1; i++){
+    std::cout << solution.x[x_start + i] << " ";
+    std::cout << solution.x[y_start + i] << " ";
+    std::cout << solution.x[psi_start + i] << " ";
+    std::cout << solution.x[v_start + i] << " ";
+    std::cout << solution.x[cte_start + i] << " ";
+    std::cout << solution.x[epsi_start+ i] << " ";
+    std::cout << solution.x[delta_start+ i] << " ";
+    std::cout << solution.x[a_start+ i] << " ";
+    std::cout << "\n";
+  }
+
+
+  return {solution.x[x_start + offset],   solution.x[y_start + offset],
+          solution.x[psi_start + offset], solution.x[v_start + offset],
+          solution.x[cte_start + offset], solution.x[epsi_start + offset],
           solution.x[delta_start],   solution.x[a_start]};
 }
 
