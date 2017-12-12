@@ -154,10 +154,10 @@ int main() {
           coeffs = polyfit(xvals, yvals, 2);
 
           double epsi = -CppAD::atan(mpc.PolynomialValueOrDeriv(true, coeffs, 0.0));
-          double cte = MPC::PolynomialValueOrDeriv(false, coeffs, 0.0);
+          double cte = -MPC::PolynomialValueOrDeriv(false, coeffs, 0.0);
 
-          Eigen::VectorXd state(8);
-          state << 0.0, 0.0, 0.0, v, cte, epsi, steer, throttle;
+          Eigen::VectorXd state(6);
+          state << 0.0, 0.0, 0.0, v, cte, epsi;
           std::cout << "State: \n" << state <<  "\n";
 
           if(false) {
@@ -170,9 +170,7 @@ int main() {
             for (int j = 0; j < 100; j++) {
               double x_tmp = min_x + j / 100.0 * diff;
               xgrid.push_back(x_tmp);
-              double y_tmp = coeffs[0] +
-                             coeffs[1] * x_tmp +
-                             coeffs[2] * x_tmp * x_tmp;
+              double y_tmp = polyeval(coeffs, x_tmp);
               ygrid.push_back(y_tmp);
             }
             std::cout << "\nend grid print\n";
@@ -197,10 +195,30 @@ int main() {
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
           mpc_x_vals.push_back(vars[0]);
-          mpc_y_vals.push_back(vars[1]);
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
+
+
+          mpc_x_vals.push_back(vars[8]);
+          mpc_x_vals.push_back(vars[9]);
+          mpc_x_vals.push_back(vars[10]);
+          mpc_x_vals.push_back(vars[11]);
+          mpc_x_vals.push_back(vars[12]);
+
+          mpc_y_vals.push_back(vars[1]);
+          mpc_y_vals.push_back(vars[15]);
+          mpc_y_vals.push_back(vars[16]);
+          mpc_y_vals.push_back(vars[17]);
+          mpc_y_vals.push_back(vars[18]);
+          mpc_y_vals.push_back(vars[19]);
+
+          // mpc_y_vals.push_back(vars[22]);
+          // mpc_y_vals.push_back(vars[23]);
+          // mpc_y_vals.push_back(vars[24]);
+          // mpc_y_vals.push_back(vars[25]);
+          // mpc_y_vals.push_back(vars[26]);
+          // mpc_y_vals.push_back(vars[27]);
 
           msgJson["mpc_x"] = mpc_x_vals;
           msgJson["mpc_y"] = mpc_y_vals;
