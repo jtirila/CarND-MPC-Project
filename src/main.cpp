@@ -209,14 +209,14 @@ int main() {
 
           mpc_x_vals.push_back(vars[8] + delta_x_car);
           mpc_x_vals.push_back(vars[9] + delta_x_car);
-          mpc_x_vals.push_back(vars[10] + delta_x_car);
+          // mpc_x_vals.push_back(vars[10] + delta_x_car);
           // mpc_x_vals.push_back(vars[11] + delta_x_car);
           // mpc_x_vals.push_back(vars[12]);
 
           mpc_y_vals.push_back(vars[1] + delta_y_car);
           mpc_y_vals.push_back(vars[15] + delta_y_car);
           mpc_y_vals.push_back(vars[16] + delta_y_car);
-          mpc_y_vals.push_back(vars[17] + delta_y_car);
+          // mpc_y_vals.push_back(vars[17] + delta_y_car);
           // mpc_y_vals.push_back(vars[18] + delta_y_car);
           // mpc_y_vals.push_back(vars[19]);
 
