@@ -137,3 +137,7 @@ Udacity simulator (click the image to view):
 
 [![D Control](https://img.youtube.com/vi/yuPbixOfkO4/0.jpg)](https://www.youtube.com/watch?v=yuPbixOfkO4)
 
+## References
+
+In addition to the documentations of the included libraries, and some StackOverflow answers, I skimmed through the 
+related Udacity discussion board. 
