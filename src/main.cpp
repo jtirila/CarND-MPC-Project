@@ -140,9 +140,16 @@ int main() {
 
 
           double pred_dt = 0.1;
-          px += v * pred_dt * CppAD::cos(psi);
-          py += v * pred_dt * CppAD::sin(psi);
-          psi += v / Lf * steer * pred_dt;
+          double delta_x = v * pred_dt * CppAD::cos(psi);
+
+          double delta_x_car = v * pred_dt;
+          double delta_y_car = v * pred_dt * CppAD::sin(v / 2 * Lf * steer * pred_dt);
+
+          double delta_y = v * pred_dt * CppAD::sin(psi + v / 2 * Lf * steer * pred_dt);
+          double delta_psi = v / Lf * steer * pred_dt;
+          px += delta_x;
+          py += delta_y;
+          psi += delta_psi;
           v += throttle * pred_dt;
 
           std::vector<double> car_coords {px, py, psi};
@@ -153,8 +160,8 @@ int main() {
           Eigen::VectorXd yvals = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(transformed_waypoints[1].data(), transformed_waypoints[1].size());
           coeffs = polyfit(xvals, yvals, 2);
 
-          double epsi = -CppAD::atan(mpc.PolynomialValueOrDeriv(true, coeffs, 0.0));
-          double cte = -MPC::PolynomialValueOrDeriv(false, coeffs, 0.0);
+          double epsi = -CppAD::Value(CppAD::atan(mpc.PolynomialValueOrDeriv(true, coeffs, 0.0)));
+          double cte = -CppAD::Value(MPC::PolynomialValueOrDeriv(false, coeffs, 0.0));
 
           Eigen::VectorXd state(6);
           state << 0.0, 0.0, 0.0, v, cte, epsi;
@@ -194,24 +201,24 @@ int main() {
           //Display the MPC predicted trajectory 
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
-          mpc_x_vals.push_back(vars[0]);
+          mpc_x_vals.push_back(vars[0] + delta_x_car);
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
 
 
-          mpc_x_vals.push_back(vars[8]);
-          mpc_x_vals.push_back(vars[9]);
-          mpc_x_vals.push_back(vars[10]);
-          mpc_x_vals.push_back(vars[11]);
-          mpc_x_vals.push_back(vars[12]);
+          mpc_x_vals.push_back(vars[8] + delta_x_car);
+          mpc_x_vals.push_back(vars[9] + delta_x_car);
+          mpc_x_vals.push_back(vars[10] + delta_x_car);
+          // mpc_x_vals.push_back(vars[11] + delta_x_car);
+          // mpc_x_vals.push_back(vars[12]);
 
-          mpc_y_vals.push_back(vars[1]);
-          mpc_y_vals.push_back(vars[15]);
-          mpc_y_vals.push_back(vars[16]);
-          mpc_y_vals.push_back(vars[17]);
-          mpc_y_vals.push_back(vars[18]);
-          mpc_y_vals.push_back(vars[19]);
+          mpc_y_vals.push_back(vars[1] + delta_y_car);
+          mpc_y_vals.push_back(vars[15] + delta_y_car);
+          mpc_y_vals.push_back(vars[16] + delta_y_car);
+          mpc_y_vals.push_back(vars[17] + delta_y_car);
+          // mpc_y_vals.push_back(vars[18] + delta_y_car);
+          // mpc_y_vals.push_back(vars[19]);
 
           // mpc_y_vals.push_back(vars[22]);
           // mpc_y_vals.push_back(vars[23]);

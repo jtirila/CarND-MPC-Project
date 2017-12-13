@@ -17,7 +17,7 @@ class MPC {
   // Solve the model given an initial state and polynomial coefficients.
   // Return the first actuatotions.
   vector<double> Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs);
-  static double PolynomialValueOrDeriv(bool derivative, Eigen::VectorXd& coeffs, CppAD::AD<double> xval);
+  static CppAD::AD<double> PolynomialValueOrDeriv(bool derivative, Eigen::VectorXd& coeffs, CppAD::AD<double> xval);
   static double NormalizedAngle(double angle);
 };
 
