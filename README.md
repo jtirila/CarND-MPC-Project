@@ -130,3 +130,9 @@ As per the lectures, I added some coefficients to the terms in the cost function
 phenomena more weight. The result can be seen in the code and results from a combination of intuitive 
 reasoning and trial and error. 
 
+## The result
+
+To see how the code performs, you can run the code, or alternatively just sit back and watch one lap of driving in the Udacity simulator: 
+
+[![D Control](https://img.youtube.com/vi/yuPbixOfkO4/0.jpg)](https://www.youtube.com/watch?v=yuPbixOfkO4)
+
