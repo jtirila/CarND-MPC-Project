@@ -132,7 +132,8 @@ reasoning and trial and error.
 
 ## The result
 
-To see how the code performs, you can run the code, or alternatively just sit back and watch one lap of driving in the Udacity simulator: 
+To see how the code performs, you can run the code, or alternatively just sit back and watch one lap of driving in the 
+Udacity simulator (click the image to view): 
 
 [![D Control](https://img.youtube.com/vi/yuPbixOfkO4/0.jpg)](https://www.youtube.com/watch?v=yuPbixOfkO4)
 
