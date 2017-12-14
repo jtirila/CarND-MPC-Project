@@ -75,25 +75,18 @@ While the update equations are largely similar to those int the line quiz, there
 ### Dealing with Latency
 
 My approach to dealing with the 100ms delay before actuations have an effect was as follows. 
-  1. Predict the vehicle's location in 100ms using the location, angle, speed and steering information 
+  1. Predict the vehicle's location in 100ms using the location, angle and speed information 
      from the previous step as the parameters. The functions to perform this prediction are listed below.  
      
         ```
           double pred_dt = 0.1;
           double delta_x = v * pred_dt * CppAD::cos(psi);
-          double delta_y = v * pred_dt * CppAD::sin(psi + v / 2 * Lf * steer * pred_dt);
+          double delta_y = v * pred_dt * CppAD::sin(psi);
           ...
           px += delta_x;
           py += delta_y;
         ```
  
-     The inclusion of steering requires an explanation. I wanted to incorporate the effect of steering in to the 
-     prediction, but only in a rough manner. This is not an exact solution, but a rough attempt at arriving at a 
-     ballpark vicinity of the correct x, y point. I speculated that even an exact calculation would have been possible as it 
-     is essentially just an integral of the sin function over time, but didn't bother with this as the 
-     approximation seemed to yield good enough results. The rationale behind using half the full turn is to pretend as though 
-     the car had been heading to an "average changed direction" instead of starting off with an angle of 0 and then 
-     slowly proceeding to turn into the direction of the steering angle. 
   2. After the optimization procedure, choose the very first actuator values that correspond to the car's prediction 
      position after the latency delay.
 
@@ -104,7 +97,7 @@ My main points when considering `N` and `dt` were:
 * `dt` so that the timespan of the optimization step covers a reasonable time range into the future, 
   "around the next corner" so that we don't end up too deep in a micro-local optimum. 
   
-With this reasoning, and some trial and error, I ended up choosing `N = 5` and `dt = 0.4`.
+With this reasoning, and some trial and error, I ended up choosing `N = 5` and `dt = 0.3`.
 
 ### Polynomial fitting and waypoint preprocessing 
 

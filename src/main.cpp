@@ -189,8 +189,8 @@ int main() {
           // }
 
           std::vector<double> vars = mpc.Solve(state, coeffs);
-          double steer_value = vars[6];
-          double throttle_value = vars[7];
+          double steer_value = vars[14];
+          double throttle_value = vars[15];
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
@@ -202,30 +202,14 @@ int main() {
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
           mpc_x_vals.push_back(vars[0] + delta_x_car);
+          mpc_x_vals.push_back(vars[1] + delta_x_car);
+          mpc_x_vals.push_back(vars[2] + delta_x_car);
+          mpc_x_vals.push_back(vars[3] + delta_x_car);
 
-          //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
-          // the points in the simulator are connected by a Green line
-
-
-          mpc_x_vals.push_back(vars[8] + delta_x_car);
-          mpc_x_vals.push_back(vars[9] + delta_x_car);
-          // mpc_x_vals.push_back(vars[10] + delta_x_car);
-          // mpc_x_vals.push_back(vars[11] + delta_x_car);
-          // mpc_x_vals.push_back(vars[12]);
-
-          mpc_y_vals.push_back(vars[1] + delta_y_car);
-          mpc_y_vals.push_back(vars[15] + delta_y_car);
-          mpc_y_vals.push_back(vars[16] + delta_y_car);
-          // mpc_y_vals.push_back(vars[17] + delta_y_car);
-          // mpc_y_vals.push_back(vars[18] + delta_y_car);
-          // mpc_y_vals.push_back(vars[19]);
-
-          // mpc_y_vals.push_back(vars[22]);
-          // mpc_y_vals.push_back(vars[23]);
-          // mpc_y_vals.push_back(vars[24]);
-          // mpc_y_vals.push_back(vars[25]);
-          // mpc_y_vals.push_back(vars[26]);
-          // mpc_y_vals.push_back(vars[27]);
+          mpc_y_vals.push_back(vars[5] + delta_y_car);
+          mpc_y_vals.push_back(vars[6] + delta_y_car);
+          mpc_y_vals.push_back(vars[7] + delta_y_car);
+          mpc_y_vals.push_back(vars[8] + delta_y_car);
 
           msgJson["mpc_x"] = mpc_x_vals;
           msgJson["mpc_y"] = mpc_y_vals;
@@ -243,6 +227,7 @@ int main() {
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
+
           // Latency
           // The purpose is to mimic real driving conditions where
           // the car does actuate the commands instantly.

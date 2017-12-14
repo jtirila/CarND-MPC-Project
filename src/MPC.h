@@ -19,6 +19,7 @@ class MPC {
   vector<double> Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs);
   static CppAD::AD<double> PolynomialValueOrDeriv(bool derivative, Eigen::VectorXd& coeffs, CppAD::AD<double> xval);
   static double NormalizedAngle(double angle);
+  static double polyeval(Eigen::VectorXd coeffs, double x);
 };
 
 #endif /* MPC_H */

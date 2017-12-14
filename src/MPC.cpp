@@ -142,19 +142,6 @@ public:
       AD<double> delta0 = vars[delta_start + t - 1];
       AD<double> a0 = vars[a_start + t - 1];
 
-      // AD<double> f0 = MPC::PolynomialValueOrDeriv(false, coeffs, x0);
-      // AD<double> psides0 = CppAD::atan(MPC::PolynomialValueOrDeriv(true, coeffs, x0));
-
-      // Here's `x` to get you started.
-      // The idea here is to constraint this value to be 0.
-      //
-      // Recall the equations for the model:
-      // x_[t+1] = x[t] + v[t] * cos(psi[t]) * dt
-      // y_[t+1] = y[t] + v[t] * sin(psi[t]) * dt
-      // psi_[t+1] = psi[t] + v[t] / Lf * delta[t] * dt
-      // v_[t+1] = v[t] + a[t] * dt
-      // cte[t+1] = f(x[t]) - y[t] + v[t] * sin(epsi[t]) * dt
-      // epsi[t+1] = psi[t] - psides[t] + v[t] * delta[t] / Lf * dt
       fg[1 + x_start + t] = x1 - (x0 + v0 * CppAD::cos(psi0) * dt);
       fg[1 + y_start + t] = y1 - (y0 + v0 * CppAD::sin(psi0) * dt);
       fg[1 + psi_start + t] = CppAD::Var2Par(psi1 - (psi0 + v0 * delta0 / Lf * dt));
@@ -313,16 +300,19 @@ vector<double> MPC::Solve(Eigen::VectorXd x0, Eigen::VectorXd coeffs) {
   }
 
 
-  return {solution.x[x_start + offset], solution.x[y_start + offset],
+  return {solution.x[x_start + offset],
+          solution.x[x_start + offset + 1],
+          solution.x[x_start + offset + 2],
+          solution.x[x_start + offset + 3],
+          solution.x[x_start + offset + 4],
+          solution.x[y_start + offset],
+          solution.x[y_start + offset + 1],
+          solution.x[y_start + offset + 2],
+          solution.x[y_start + offset + 3],
+          solution.x[y_start + offset + 4],
           solution.x[psi_start + offset], solution.x[v_start + offset],
           solution.x[cte_start + offset], solution.x[epsi_start + offset],
-          solution.x[delta_start],   solution.x[a_start], solution.x[x_start + offset + 1],
-          solution.x[x_start + offset + 2], solution.x[x_start + offset + 3],
-          solution.x[x_start + offset + 4], solution.x[x_start + offset + 5],
-          solution.x[x_start + offset + 6], solution.x[x_start + offset + 7], solution.x[y_start + offset + 1],
-          solution.x[y_start + offset + 2], solution.x[y_start + offset + 3],
-          solution.x[y_start + offset + 4], solution.x[y_start + offset + 5],
-          solution.x[y_start + offset + 6], solution.x[y_start + offset + 7],
+          solution.x[delta_start],   solution.x[a_start],
           CppAD::Value(MPC::PolynomialValueOrDeriv(false, coeffs, solution.x[x_start + offset])),
           CppAD::Value(MPC::PolynomialValueOrDeriv(false, coeffs, solution.x[x_start + offset + 1])),
           CppAD::Value(MPC::PolynomialValueOrDeriv(false, coeffs, solution.x[x_start + offset + 2])),
