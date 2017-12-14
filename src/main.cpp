@@ -160,7 +160,7 @@ int main() {
           coeffs = polyfit(xvals, yvals, 3);
 
           double epsi = -CppAD::Value(CppAD::atan(mpc.PolynomialValueOrDeriv(true, coeffs, 0.0)));
-          double cte = -CppAD::Value(MPC::PolynomialValueOrDeriv(false, coeffs, 0.0));
+          double cte = polyeval(coeffs, 0.0);
 
           Eigen::VectorXd state(6);
           state << 0.0, 0.0, 0.0, v, cte, epsi;

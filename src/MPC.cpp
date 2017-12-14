@@ -22,7 +22,7 @@ double dt = 0.3;
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
 // Miles per hour converted to m/s
-const double ref_v = 0.44704 * 70;
+const double ref_v = 0.44704 * 60;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -151,7 +151,7 @@ public:
       fg[1 + f_start + t] =
           f1 - polyeval2(coeffs, x0 + v0 * CppAD::cos(psi0) * dt);
       fg[1 + psides_start + t] =
-          psides1 - CppAD::atan(coeffs[1] * 2 + coeffs[2] * x0 + 3 * coeffs[3] * x0 * x0);
+          psides1 - CppAD::atan(coeffs[1] + 2 * coeffs[2] * x0 + 3 * coeffs[3] * x0 * x0);
       fg[1 + epsi_start + t] =
           epsi1 - ((psi0 - psides0) + v0 * delta0 / Lf * dt);
     }
@@ -166,7 +166,6 @@ MPC::MPC() {}
 MPC::~MPC() {}
 
 vector<double> MPC::Solve(Eigen::VectorXd x0, Eigen::VectorXd coeffs) {
-  size_t i;
   typedef CPPAD_TESTVECTOR(double) Dvector;
 
   double x = x0[0];

@@ -135,7 +135,7 @@ reasoning and trial and error.
 To see how the code performs, you can run the code, or alternatively just sit back and watch one lap of driving in the 
 Udacity simulator (click the image to view; Note: the clip's speed is accelerated to 2x the original): 
 
-[![D Control](https://img.youtube.com/vi/D1i8pSHJYu0/0.jpg)](https://www.youtube.com/watch?v=D1i8pSHJYu0)
+[![D Control](https://img.youtube.com/vi/GedsKVObZHM/0.jpg)](https://www.youtube.com/watch?v=GedsKVObZHM)
 
 ## References
 
