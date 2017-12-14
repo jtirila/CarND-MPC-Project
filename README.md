@@ -48,13 +48,20 @@ straight line. The biggest differences are the following.
 While the update equations are largely similar to those int the line quiz, there are some differences: 
 * The CTE calculation seems to me to be wrong in the material. I implemented it as: 
   ```
-      fg[1 + cte_start + t] = cte1 - ((y0 - f0) + (v0 * CppAD::sin(epsi0) * dt));
+    cte[t+1] = y[t] - f(x[t]) + v[t] * sin(epsi[t]) * dt
   ``` 
 * Inclusion of f and psides: in the process, I had suspicions that these need to be 
   included at each time step in the "augmented state vector". After finding out 
   that the values were remaining the same throughout, I made some changes and verified 
-  the desired behavior. Left them in for debugging purposes. The equations are: 
+  the desired behavior. Left them in for debugging purposes. The equations, along with the other remaining update equations, are: 
   ```
+    x_[t+1] = x[t] + v[t] * cos(psi[t]) * dt
+    y_[t+1] = y[t] + v[t] * sin(psi[t]) * dt
+    psi_[t+1] = psi[t] + v[t] / Lf * delta[t] * dt
+    v_[t+1] = v[t] + a[t] * dt
+    f[t+1] = polyeval(coeffs, x0 + v0 * CppAD::cos(psi0) * dt)
+    psides[t+1] = CppAD::atan(coeffs[1] * 2 + coeffs[2] * x0 + 3 * coeffs[3] * x0 * x0)
+    epsi[t+1] = psi[t] - psides[t] + v[t] * delta[t] / Lf * dt
       fg[1 + f_start + t] =
           f1 - polyeval2(coeffs, x0 + v0 * CppAD::cos(psi0) * dt);
       fg[1 + psides_start + t] =

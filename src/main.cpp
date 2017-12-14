@@ -8,9 +8,10 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "MPC.h"
 #include "json.hpp"
-#include "matplotlibcpp.h"
 
-namespace plt = matplotlibcpp;
+// Debug includes, left here for review
+// #include "matplotlibcpp.h"
+// namespace plt = matplotlibcpp;
 
 // for convenience
 using json = nlohmann::json;
@@ -139,12 +140,12 @@ int main() {
 
           double pred_dt = 0.1;
           double delta_x = v * pred_dt * CppAD::cos(psi);
+          double delta_y = v * pred_dt * CppAD::sin(psi);
 
           double delta_x_car = v * pred_dt;
-          double delta_y_car = v * pred_dt * CppAD::sin(v / 2 * Lf * steer * pred_dt);
-
-          double delta_y = v * pred_dt * CppAD::sin(psi + v / 2 * Lf * steer * pred_dt);
+          double delta_y_car = 0;
           double delta_psi = v / Lf * steer * pred_dt;
+
           px += delta_x;
           py += delta_y;
           psi += delta_psi;
@@ -156,7 +157,7 @@ int main() {
           Eigen::VectorXd coeffs(3);
           Eigen::VectorXd xvals = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(transformed_waypoints[0].data(), transformed_waypoints[0].size());
           Eigen::VectorXd yvals = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(transformed_waypoints[1].data(), transformed_waypoints[1].size());
-          coeffs = polyfit(xvals, yvals, 2);
+          coeffs = polyfit(xvals, yvals, 3);
 
           double epsi = -CppAD::Value(CppAD::atan(mpc.PolynomialValueOrDeriv(true, coeffs, 0.0)));
           double cte = -CppAD::Value(MPC::PolynomialValueOrDeriv(false, coeffs, 0.0));
@@ -165,26 +166,27 @@ int main() {
           state << 0.0, 0.0, 0.0, v, cte, epsi;
           std::cout << "State: \n" << state <<  "\n";
 
-          if(false) {
-            double min_x = *std::min_element(std::begin(transformed_waypoints[0]), std::end(transformed_waypoints[0]));
-            double diff = *std::max_element(std::begin(transformed_waypoints[0]), std::end(transformed_waypoints[0])) - min_x;
+          // This was used for debugging the polynomial fit.
+          // if(false) {
+          //   double min_x = *std::min_element(std::begin(transformed_waypoints[0]), std::end(transformed_waypoints[0]));
+          //   double diff = *std::max_element(std::begin(transformed_waypoints[0]), std::end(transformed_waypoints[0])) - min_x;
 
-            std::vector<double> xgrid;
-            std::vector<double> ygrid;
-            std::cout << "begin grid print\n";
-            for (int j = 0; j < 100; j++) {
-              double x_tmp = min_x + j / 100.0 * diff;
-              xgrid.push_back(x_tmp);
-              double y_tmp = polyeval(coeffs, x_tmp);
-              ygrid.push_back(y_tmp);
-            }
-            std::cout << "\nend grid print\n";
+          //   std::vector<double> xgrid;
+          //   std::vector<double> ygrid;
+          //   std::cout << "begin grid print\n";
+          //   for (int j = 0; j < 100; j++) {
+          //     double x_tmp = min_x + j / 100.0 * diff;
+          //     xgrid.push_back(x_tmp);
+          //     double y_tmp = polyeval(coeffs, x_tmp);
+          //     ygrid.push_back(y_tmp);
+          //   }
+          //   std::cout << "\nend grid print\n";
 
 
-            plt::plot(xgrid, ygrid);
-            plt::plot(transformed_waypoints[0], transformed_waypoints[1], "rx");
-            plt::show();
-          }
+          //   plt::plot(xgrid, ygrid);
+          //   plt::plot(transformed_waypoints[0], transformed_waypoints[1], "rx");
+          //   plt::show();
+          // }
 
           std::vector<double> vars = mpc.Solve(state, coeffs);
           double steer_value = vars[6];
